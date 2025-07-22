@@ -399,37 +399,36 @@
 
     // Carga estudiantes en selector ordenados por apellido
     function populateStudentSelector() {
-      const select = document.getElementById('studentSelector');
-      select.innerHTML = '';
+    const select = document.getElementById('studentSelector');
+    select.innerHTML = '';
 
-      // Convertir a arreglo para ordenar
-      const studentsArray = Object.entries(students);
+    // Convertir a arreglo para ordenar
+    const studentsArray = Object.entries(students);
 
-      // Ordenar por apellido (última palabra del nombre)
-      studentsArray.sort((a, b) => {
-        const apellidoA = a[1].name.trim().split(' ').slice(-1)[0].toLowerCase();
-        const apellidoB = b[1].name.trim().split(' ').slice(-1)[0].toLowerCase();
-        return apellidoA.localeCompare(apellidoB);
-      });
+    // Ordenar por apellido paterno (segunda palabra del nombre)
+    studentsArray.sort((a, b) => {
+    const apellidoA = a[1].name.trim().split(' ')[1]?.toLowerCase() || '';
+    const apellidoB = b[1].name.trim().split(' ')[1]?.toLowerCase() || '';
+    return apellidoA.localeCompare(apellidoB);
+  });
 
-      for (const [rut, student] of studentsArray) {
-        const opt = document.createElement('option');
-        opt.value = rut;
-        opt.textContent = `${student.name} (${rut})`;
-        select.appendChild(opt);
-      }
+  for (const [rut, student] of studentsArray) {
+    const opt = document.createElement('option');
+    opt.value = rut;
+    opt.textContent = `${student.name} (${rut})`;
+    select.appendChild(opt);
+  }
 
-      if (studentsArray.length > 0) {
-        if (!currentStudentId || !students[currentStudentId]) {
-          currentStudentId = studentsArray[0][0];
-        }
-        select.value = currentStudentId;
-      } else {
-        currentStudentId = null;
-      }
-      updateTitle();
+  if (studentsArray.length > 0) {
+    if (!currentStudentId || !students[currentStudentId]) {
+      currentStudentId = studentsArray[0][0];
     }
-
+    select.value = currentStudentId;
+  } else {
+    currentStudentId = null;
+  }
+  updateTitle();
+}
     // Actualiza título con nombre estudiante
     function updateTitle() {
       const title = document.querySelector('h1');
