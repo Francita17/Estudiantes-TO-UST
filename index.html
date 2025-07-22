@@ -128,12 +128,13 @@
     }
     #student-controls {
       width: 80%;
-      max-width: 600px;
+      max-width: 650px;
       margin: 15px auto 10px;
       display: flex;
       justify-content: center;
       gap: 10px;
       flex-wrap: wrap;
+      align-items: center;
     }
     button {
       padding: 10px 18px;
@@ -160,12 +161,13 @@
       user-select: none;
     }
     label {
+      font-size: 0.9em;
+      user-select: none;
+      color: #2e7d32;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.9em;
-      color: #2e7d32;
-      user-select: none;
+      gap: 4px;
     }
     @media (max-width: 600px) {
       .year {
@@ -175,10 +177,6 @@
       #student-controls {
         flex-direction: column;
         gap: 8px;
-        align-items: center;
-      }
-      select, button {
-        max-width: 100%;
       }
     }
   </style>
@@ -209,7 +207,7 @@
   <button onclick="resetProgress()">Reiniciar Progreso</button>
 
   <script>
-    // Datos de la malla curricular
+    // Malla curricular simplificada para ejemplo (agrega el detalle completo igual que antes)
     const curriculum = {
       'Año 1': ['I', 'II'],
       'Año 2': ['III', 'IV'],
@@ -218,6 +216,7 @@
       'Año 5': ['IX', 'X']
     };
 
+    // Lista completa de asignaturas (coloca la lista completa aquí, igual que antes)
     const subjects = [
       { code: 'MAT-016', name: 'Razonamiento Lógico Matemático', semester: 'I', prereq: [] },
       { code: 'BIO-006', name: 'Principios de la Biología', semester: 'I', prereq: [] },
@@ -279,69 +278,39 @@
       { code: 'TOC-118', name: 'Internado Profesional IV', semester: 'X', prereq: ['TOC-107','TOC-117'] }
     ];
 
-    // Variables globales
-    let students = {};
+    // Guardar estudiantes y progreso en localStorage
+    let students = JSON.parse(localStorage.getItem('students')) || {};
     let currentStudentId = null;
 
-    // Carga estudiantes y convierte formato antiguo si detecta
-    function loadStudents() {
-      let stored = localStorage.getItem('students');
-      if (!stored) return {};
-      try {
-        const parsed = JSON.parse(stored);
-        // Detectar formato antiguo (valores string)
-        const firstValue = Object.values(parsed)[0];
-        if (firstValue && typeof firstValue === 'string') {
-          // Convertir formato antiguo a nuevo
-          const converted = {};
-          for (const key in parsed) {
-            const val = parsed[key]; // ej: "Juan Perez Casanova (12345678-9)"
-            const m = val.match(/^(.+)\s+\((.+)\)$/);
-            if (!m) continue;
-            const fullName = m[1].trim();
-            const rut = m[2].trim();
-            const parts = fullName.split(' ');
+    // Obtener checkbox "permitir tomar sin prerrequisitos"
+    const allowNoPrereqCheckbox = document.getElementById('allowNoPrereq');
 
-            let lastName = parts[1] || '';
-            let motherLastName = parts[2] || '';
-            let firstName = parts.slice(3).join(' ') || parts[0] || '';
-
-            if(parts.length === 3){
-              lastName = parts[1];
-              motherLastName = '';
-              firstName = parts[2];
-            }
-            if(parts.length === 2){
-              lastName = parts[1];
-              motherLastName = '';
-              firstName = parts[0];
-            }
-
-            converted[rut] = {
-              rut,
-              firstName: firstName.trim(),
-              lastName: lastName.trim(),
-              motherLastName: motherLastName.trim(),
-              approved: [],
-              reprobated: []
-            };
-          }
-          localStorage.setItem('students', JSON.stringify(converted));
-          return converted;
-        } else {
-          return parsed;
-        }
-      } catch(e) {
-        console.error('Error parsing students', e);
-        return {};
+    // Funciones para validar prerrequisitos
+    function meetsPrerequisites(studentData, subject) {
+      if (allowNoPrereqCheckbox.checked) {
+        // Permitir tomar sin prereq, solo bloquear si está reprobado
+        return !isReprobated(studentData, subject.code);
       }
+      // Sin habilitar, verificar prereq normalmente
+      return subject.prereq.every(code => studentData.approved.includes(code));
     }
 
-    function saveStudents() {
-      localStorage.setItem('students', JSON.stringify(students));
+    // Para internados (semestres IX y X) validar que aprobaron todo hasta VIII
+    function allSemestersApproved(studentData, uptoSemester) {
+      const allowedSemesters = ['I','II','III','IV','V','VI','VII','VIII'];
+      const semestersToCheck = allowedSemesters.slice(0, allowedSemesters.indexOf(uptoSemester) + 1);
+      const subjectsToCheck = subjects.filter(s => semestersToCheck.includes(s.semester));
+      return subjectsToCheck.every(s => studentData.approved.includes(s.code));
     }
 
-    // Ordenar estudiantes por apellido paterno
+    function isApproved(studentData, code) {
+      return studentData.approved.includes(code);
+    }
+    function isReprobated(studentData, code) {
+      return studentData.reprobated.includes(code);
+    }
+
+    // Ordena estudiantes por apellido paterno alfabéticamente
     function getSortedStudents() {
       return Object.values(students).sort((a,b) => {
         const aLast = a.lastName.toLowerCase();
@@ -352,19 +321,22 @@
       });
     }
 
-    // Renderizar lista de estudiantes
-    function renderStudentSelector() {
+    // Renderizar selector estudiantes y seleccionar uno
+    function renderStudentSelector(selectedRut) {
       const select = document.getElementById('studentSelector');
       select.innerHTML = '';
       const sorted = getSortedStudents();
       sorted.forEach(s => {
-        const nameParts = [s.lastName, s.motherLastName, s.firstName].filter(Boolean).join(' ');
+        const displayName = [s.lastName, s.motherLastName, s.firstName].filter(Boolean).join(' ');
         const option = document.createElement('option');
         option.value = s.rut;
-        option.textContent = `${nameParts} (${s.rut})`;
+        option.textContent = `${displayName} (${s.rut})`;
         select.appendChild(option);
       });
-      if(sorted.length > 0){
+      if (selectedRut && students[selectedRut]) {
+        select.value = selectedRut;
+        currentStudentId = selectedRut;
+      } else if (sorted.length > 0) {
         currentStudentId = sorted[0].rut;
         select.value = currentStudentId;
       } else {
@@ -374,15 +346,16 @@
       updateProgress();
     }
 
-    // Funciones para agregar, editar y eliminar estudiantes
+    // Añadir estudiante (ingreso separado)
     function addStudent() {
-      const rut = prompt('Ingrese RUT sin puntos ni guion');
-      if(!rut) return alert('RUT obligatorio');
-      if(students[rut]) return alert('RUT ya existe');
-      const lastName = prompt('Ingrese Apellido Paterno');
+      let rut = prompt('Ingrese RUT sin puntos ni guion').trim();
+      if(!rut) return alert('Debe ingresar un RUT válido');
+      if(students[rut]) return alert('Ya existe un estudiante con ese RUT');
+
+      let lastName = prompt('Ingrese Apellido Paterno');
       if(!lastName) return alert('Apellido Paterno obligatorio');
-      const motherLastName = prompt('Ingrese Apellido Materno (opcional)');
-      const firstName = prompt('Ingrese Nombre(s)');
+      let motherLastName = prompt('Ingrese Apellido Materno (opcional)');
+      let firstName = prompt('Ingrese Nombre(s)');
       if(!firstName) return alert('Nombre obligatorio');
 
       students[rut] = {
@@ -394,36 +367,43 @@
         reprobated: []
       };
       saveStudents();
-      renderStudentSelector();
-      alert('Estudiante agregado');
+      renderStudentSelector(rut);
+      alert(`Estudiante agregado: ${lastName} ${motherLastName} ${firstName} (${rut})`);
     }
 
+    // Editar estudiante (mismo formato)
     function editStudent() {
       if(!currentStudentId) return alert('No hay estudiante seleccionado');
       const s = students[currentStudentId];
-      const lastName = prompt('Editar Apellido Paterno', s.lastName);
+      let lastName = prompt('Editar Apellido Paterno', s.lastName);
       if(!lastName) return alert('Apellido Paterno obligatorio');
-      const motherLastName = prompt('Editar Apellido Materno', s.motherLastName);
-      const firstName = prompt('Editar Nombre(s)', s.firstName);
+      let motherLastName = prompt('Editar Apellido Materno', s.motherLastName);
+      let firstName = prompt('Editar Nombre(s)', s.firstName);
       if(!firstName) return alert('Nombre obligatorio');
       s.lastName = lastName.trim();
       s.motherLastName = motherLastName ? motherLastName.trim() : '';
       s.firstName = firstName.trim();
       saveStudents();
-      renderStudentSelector();
+      renderStudentSelector(currentStudentId);
       alert('Estudiante editado');
     }
 
+    // Eliminar estudiante
     function deleteStudent() {
       if(!currentStudentId) return alert('No hay estudiante seleccionado');
-      if(!confirm('Confirmar eliminación del estudiante seleccionado')) return;
+      if(!confirm('¿Confirma eliminar este estudiante?')) return;
       delete students[currentStudentId];
       saveStudents();
       renderStudentSelector();
       alert('Estudiante eliminado');
     }
 
-    // Cambiar estudiante seleccionado
+    // Guardar estudiantes en localStorage
+    function saveStudents() {
+      localStorage.setItem('students', JSON.stringify(students));
+    }
+
+    // Al cambiar estudiante en selector
     document.getElementById('studentSelector').addEventListener('change', e => {
       currentStudentId = e.target.value;
       renderCurriculum();
@@ -435,160 +415,158 @@
     document.getElementById('editStudentBtn').addEventListener('click', editStudent);
     document.getElementById('deleteStudentBtn').addEventListener('click', deleteStudent);
 
-    // Checkbox para permitir saltar prerrequisitos
-    const allowNoPrereqCheckbox = document.getElementById('allowNoPrereq');
+    // Al cambiar checkbox "permitir sin prereq"
     allowNoPrereqCheckbox.addEventListener('change', () => {
       renderCurriculum();
     });
 
-    // Verifica si una asignatura está desbloqueada para el estudiante actual
-    function isSubjectUnlocked(subjectCode) {
-      if (!currentStudentId) return false;
-      const s = students[currentStudentId];
-      if(!s) return false;
-
-      if (allowNoPrereqCheckbox.checked) {
-        // Permite tomar sin prerrequisitos siempre
-        return true;
-      }
-
-      // Verificar prerrequisitos
-      const subject = subjects.find(sub => sub.code === subjectCode);
-      if(!subject) return false;
-
-      // Si no tiene prerrequisitos, está desbloqueada
-      if (!subject.prereq || subject.prereq.length === 0) return true;
-
-      // Verificar que todas las prerrequisitos estén aprobados
-      return subject.prereq.every(pr => s.approved.includes(pr));
-    }
-
-    // Renderizar malla curricular con estados
+    // Renderizar la malla curricular con estados y prerrequisitos
     function renderCurriculum() {
       const container = document.getElementById('curriculum');
       container.innerHTML = '';
 
-      if (!currentStudentId || !students[currentStudentId]) {
-        container.textContent = 'No hay estudiante seleccionado.';
+      if(!currentStudentId || !students[currentStudentId]) {
+        container.innerHTML = '<p style="text-align:center;color:#555;">No hay estudiante seleccionado.</p>';
         return;
       }
+      const studentData = students[currentStudentId];
 
-      const s = students[currentStudentId];
-
-      for (const [year, semesters] of Object.entries(curriculum)) {
+      for (const year in curriculum) {
         const yearDiv = document.createElement('div');
-        yearDiv.classList.add('year');
+        yearDiv.className = 'year';
+
         const yearTitle = document.createElement('h2');
         yearTitle.textContent = year;
         yearDiv.appendChild(yearTitle);
 
-        semesters.forEach(sem => {
-          const semesterDiv = document.createElement('div');
-          semesterDiv.classList.add('semester');
+        curriculum[year].forEach(sem => {
+          const semDiv = document.createElement('div');
+          semDiv.className = 'semester';
+
           const semTitle = document.createElement('h3');
           semTitle.textContent = `Semestre ${sem}`;
-          semesterDiv.appendChild(semTitle);
+          semDiv.appendChild(semTitle);
 
-          // Filtrar asignaturas del semestre
-          const subs = subjects.filter(sub => sub.semester === sem);
-          subs.forEach(sub => {
+          // Filtrar asignaturas por semestre
+          const subs = subjects.filter(s => s.semester === sem);
+          subs.forEach(subject => {
             const subjDiv = document.createElement('div');
-            subjDiv.classList.add('subject');
-            subjDiv.textContent = `${sub.code} - ${sub.name}`;
+            subjDiv.className = 'subject';
 
-            // Tooltip con prerrequisitos
-            if(sub.prereq && sub.prereq.length > 0){
-              subjDiv.title = 'Prerrequisitos:\n' + sub.prereq.join('\n');
-            }
-
-            // Estados de asignatura para el estudiante actual
-            if (s.approved.includes(sub.code)) {
+            // Estado aprobado, reprobado, bloqueado
+            if(isApproved(studentData, subject.code)) {
               subjDiv.classList.add('approved');
-              subjDiv.title += '\nEstado: Aprobada';
-            } else if (s.reprobated.includes(sub.code)) {
+            } else if(isReprobated(studentData, subject.code)) {
               subjDiv.classList.add('reprobated');
-              subjDiv.title += '\nEstado: Reprobada';
-            } else if (!isSubjectUnlocked(sub.code)) {
-              subjDiv.classList.add('locked');
-              subjDiv.title += '\nEstado: Bloqueada';
+            } else {
+              // Verificar prerrequisitos
+              let locked = !meetsPrerequisites(studentData, subject);
+
+              // Para internados (IX, X) bloquear si no aprobaron todo hasta VIII
+              if(['IX','X'].includes(subject.semester)) {
+                if(!allSemestersApproved(studentData, 'VIII')) {
+                  locked = true;
+                }
+                // Además deben aprobar internados previos
+                if(subject.semester === 'IX') {
+                  // Para Internado II deben aprobar Internado I
+                  if(subject.code === 'TOC-115' && !isApproved(studentData,'TOC-114')) locked = true;
+                }
+                if(subject.semester === 'X') {
+                  // Para Internado III debe aprobar Internado II
+                  if(subject.code === 'TOC-117' && !isApproved(studentData,'TOC-115')) locked = true;
+                  // Para Internado IV debe aprobar Internado III
+                  if(subject.code === 'TOC-118' && !isApproved(studentData,'TOC-117')) locked = true;
+                }
+              }
+
+              if(locked) subjDiv.classList.add('locked');
             }
 
-            // Click para cambiar estado (solo si desbloqueada o permiso)
-            if (!subjDiv.classList.contains('locked')) {
-              subjDiv.style.cursor = 'pointer';
+            subjDiv.textContent = `${subject.code} - ${subject.name}`;
+
+            // Tooltip con prerrequisitos si tiene
+            if(subject.prereq.length > 0) {
+              subjDiv.title = 'Prerrequisitos: ' + subject.prereq.join(', ');
+            }
+
+            // Click para cambiar estado si no bloqueado
+            if(!subjDiv.classList.contains('locked')) {
               subjDiv.addEventListener('click', () => {
-                toggleSubjectState(sub.code);
+                toggleSubjectState(subject.code);
               });
             }
 
-            semesterDiv.appendChild(subjDiv);
+            semDiv.appendChild(subjDiv);
           });
 
-          yearDiv.appendChild(semesterDiv);
+          yearDiv.appendChild(semDiv);
         });
 
         container.appendChild(yearDiv);
       }
     }
 
-    // Cambiar estado de asignatura para el estudiante actual
+    // Cambiar estado asignatura clickeada: no aprobado -> aprobado -> reprobado -> no aprobado
     function toggleSubjectState(code) {
-      if (!currentStudentId) return alert('Seleccione un estudiante');
-      const s = students[currentStudentId];
+      if(!currentStudentId) return;
+      const studentData = students[currentStudentId];
 
-      // Ciclo de estados: sin marcar → aprobado → reprobado → sin marcar
-      if (!s.approved.includes(code) && !s.reprobated.includes(code)) {
-        s.approved.push(code);
-      } else if (s.approved.includes(code)) {
-        // Quitar aprobado, poner reprobado
-        s.approved = s.approved.filter(c => c !== code);
-        s.reprobated.push(code);
-      } else if (s.reprobated.includes(code)) {
-        // Quitar reprobado
-        s.reprobated = s.reprobated.filter(c => c !== code);
+      if(studentData.approved.includes(code)) {
+        // Pasar a reprobado
+        studentData.approved = studentData.approved.filter(c => c !== code);
+        if(!studentData.reprobated.includes(code)) {
+          studentData.reprobated.push(code);
+        }
+      } else if(studentData.reprobated.includes(code)) {
+        // Pasar a no aprobado
+        studentData.reprobated = studentData.reprobated.filter(c => c !== code);
+      } else {
+        // Pasar a aprobado
+        studentData.approved.push(code);
+        // Quitar de reprobados si estaba
+        studentData.reprobated = studentData.reprobated.filter(c => c !== code);
       }
       saveStudents();
       renderCurriculum();
       updateProgress();
     }
 
-    // Actualiza barra de progreso basada en asignaturas aprobadas
+    // Actualizar barra y texto progreso
     function updateProgress() {
-      if (!currentStudentId) {
-        document.getElementById('progress-text').textContent = 'Progreso académico: 0%';
-        document.getElementById('progress-fill').style.width = '0%';
-        document.getElementById('progress-fill').textContent = '0%';
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+
+      if(!currentStudentId || !students[currentStudentId]) {
+        progressText.textContent = 'Progreso académico: 0%';
+        progressFill.style.width = '0%';
+        progressFill.textContent = '0%';
         return;
       }
-      const s = students[currentStudentId];
-      const total = subjects.length;
-      const approvedCount = s.approved.length;
-      const percent = total ? Math.round((approvedCount / total) * 100) : 0;
-      const progressText = `Progreso académico: ${percent}% (${approvedCount} de ${total} asignaturas)`;
-      const progressFill = document.getElementById('progress-fill');
-      document.getElementById('progress-text').textContent = progressText;
+
+      const studentData = students[currentStudentId];
+      const totalSubjects = subjects.length;
+      const approvedCount = studentData.approved.length;
+      const percent = totalSubjects === 0 ? 0 : Math.round((approvedCount / totalSubjects) * 100);
+
+      progressText.textContent = `Progreso académico: ${percent}% (${approvedCount} / ${totalSubjects} asignaturas aprobadas)`;
       progressFill.style.width = percent + '%';
       progressFill.textContent = percent + '%';
     }
 
-    // Botón para reiniciar progreso del estudiante actual
+    // Reiniciar progreso del estudiante actual
     function resetProgress() {
-      if (!currentStudentId) return alert('No hay estudiante seleccionado');
-      if (!confirm('¿Desea reiniciar el progreso del estudiante seleccionado? Esto eliminará todas las notas de asignaturas.')) return;
-      const s = students[currentStudentId];
-      s.approved = [];
-      s.reprobated = [];
+      if(!currentStudentId) return alert('No hay estudiante seleccionado');
+      if(!confirm('¿Confirma reiniciar todo el progreso de este estudiante?')) return;
+      students[currentStudentId].approved = [];
+      students[currentStudentId].reprobated = [];
       saveStudents();
       renderCurriculum();
       updateProgress();
     }
 
-    // Inicialización
-    students = loadStudents();
+    // Al cargar la página, renderizar selector con estudiantes guardados
     renderStudentSelector();
-
-    // Exponer reset en botón
-    window.resetProgress = resetProgress;
 
   </script>
 </body>
