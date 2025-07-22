@@ -283,86 +283,82 @@
       return studentData.reprobated.includes(code);
     }
 
-function renderCurriculum() {
-  const container = document.getElementById('curriculum');
-  container.innerHTML = '';
+    function renderCurriculum() {
+      const container = document.getElementById('curriculum');
+      container.innerHTML = '';
 
-  if (!currentStudentId || !students[currentStudentId]) return;
+      if (!currentStudentId || !students[currentStudentId]) return;
 
-  const studentData = students[currentStudentId];
+      const studentData = students[currentStudentId];
 
-  for (const [yearLabel, semesters] of Object.entries(curriculum)) {
-    const yearDiv = document.createElement('div');
-    yearDiv.className = 'year';
-    yearDiv.innerHTML = `<h2>${yearLabel}</h2>`;
+      for (const [yearLabel, semesters] of Object.entries(curriculum)) {
+        const yearDiv = document.createElement('div');
+        yearDiv.className = 'year';
+        yearDiv.innerHTML = `<h2>${yearLabel}</h2>`;
 
-    semesters.forEach(sem => {
-      const semDiv = document.createElement('div');
-      semDiv.className = 'semester';
-      semDiv.innerHTML = `<h3>Semestre ${sem}</h3>`;
+        semesters.forEach(sem => {
+          const semDiv = document.createElement('div');
+          semDiv.className = 'semester';
+          semDiv.innerHTML = `<h3>Semestre ${sem}</h3>`;
 
-      subjects.filter(s => s.semester === sem).forEach(subject => {
-        const hasPrereqs = meetsPrerequisites(studentData, subject);
+          subjects.filter(s => s.semester === sem).forEach(subject => {
+            const unlocked = meetsPrerequisites(studentData, subject) && (
+              (subject.semester === 'IX' || subject.semester === 'X')
+                ? allSemestersApproved(studentData, 'VIII')
+                : true
+            );
 
-        // Para internados (semestres IX y X), exige aprobar todos los semestres hasta VIII + prerrequisitos
-        let unlocked = false;
-        if (subject.semester === 'IX' || subject.semester === 'X') {
-          unlocked = allSemestersApproved(studentData, 'VIII') && hasPrereqs;
-        } else {
-          // Para otros semestres, basta con cumplir prerrequisitos (que para los que no tienen es true)
-          unlocked = hasPrereqs;
-        }
+            const subjectDiv = document.createElement('div');
+            subjectDiv.className = 'subject';
+            subjectDiv.textContent = `${subject.name} (${subject.code})`;
 
-        const subjectDiv = document.createElement('div');
-        subjectDiv.className = 'subject';
-        subjectDiv.textContent = `${subject.name} (${subject.code})`;
-
-        if (subject.prereq.length > 0) {
-          const prereqNames = subject.prereq.map(code => {
-            const subj = subjects.find(s => s.code === code);
-            return subj ? `${subj.name} (${subj.code})` : code;
-          });
-          subjectDiv.title = `Prerrequisitos:\n${prereqNames.join('\n')}`;
-        }
-
-        if (!unlocked) {
-          subjectDiv.classList.add('locked');
-          subjectDiv.title = 'Asignatura bloqueada: Prerrequisitos no cumplidos';
-        } else if (isApproved(studentData, subject.code)) {
-          subjectDiv.classList.add('approved');
-          subjectDiv.title = 'Asignatura aprobada';
-        } else if (isReprobated(studentData, subject.code)) {
-          subjectDiv.classList.add('reprobated');
-          subjectDiv.title = 'Asignatura reprobada';
-        }
-
-        subjectDiv.addEventListener('click', () => {
-          if (!unlocked) return;
-          if (isApproved(studentData, subject.code)) {
-            studentData.approved = studentData.approved.filter(c => c !== subject.code);
-            if (!studentData.reprobated.includes(subject.code)) {
-              studentData.reprobated.push(subject.code);
+            if(subject.prereq.length > 0) {
+              const prereqNames = subject.prereq.map(code => {
+                const subj = subjects.find(s => s.code === code);
+                return subj ? `${subj.name} (${subj.code})` : code;
+              });
+              subjectDiv.title = `Prerrequisitos:\n${prereqNames.join('\n')}`;
             }
-          } else if (isReprobated(studentData, subject.code)) {
-            studentData.reprobated = studentData.reprobated.filter(c => c !== subject.code);
-          } else {
-            studentData.approved.push(subject.code);
-            studentData.reprobated = studentData.reprobated.filter(c => c !== subject.code);
-          }
-          saveStudents();
-          renderCurriculum();
-          updateProgress();
+
+            if (!unlocked) {
+              subjectDiv.classList.add('locked');
+              subjectDiv.title = 'Asignatura bloqueada: Prerrequisitos no cumplidos';
+            } else if (isApproved(studentData, subject.code)) {
+              subjectDiv.classList.add('approved');
+              subjectDiv.title = 'Asignatura aprobada';
+            } else if (isReprobated(studentData, subject.code)) {
+              subjectDiv.classList.add('reprobated');
+              subjectDiv.title = 'Asignatura reprobada';
+            }
+
+            subjectDiv.addEventListener('click', () => {
+              if (!unlocked) return;
+              if (isApproved(studentData, subject.code)) {
+                studentData.approved = studentData.approved.filter(c => c !== subject.code);
+                if (!studentData.reprobated.includes(subject.code)) {
+                  studentData.reprobated.push(subject.code);
+                }
+              } else if (isReprobated(studentData, subject.code)) {
+                studentData.reprobated = studentData.reprobated.filter(c => c !== subject.code);
+              } else {
+                studentData.approved.push(subject.code);
+                studentData.reprobated = studentData.reprobated.filter(c => c !== subject.code);
+              }
+              saveStudents();
+              renderCurriculum();
+              updateProgress();
+            });
+
+            semDiv.appendChild(subjectDiv);
+          });
+
+          yearDiv.appendChild(semDiv);
         });
 
-        semDiv.appendChild(subjectDiv);
-      });
+        container.appendChild(yearDiv);
+      }
+    }
 
-      yearDiv.appendChild(semDiv);
-    });
-
-    container.appendChild(yearDiv);
-  }
-}
     function updateProgress() {
       const progressText = document.getElementById('progress-text');
       const progressFill = document.getElementById('progress-fill');
