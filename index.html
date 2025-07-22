@@ -420,35 +420,36 @@
       return `${apPat.trim()} ${apMat.trim()} ${nombres.trim()}`.replace(/\s+/g, ' ');
     }
 
-    function loadStudentSelector() {
-      const selector = document.getElementById('studentSelector');
-      selector.innerHTML = '';
-      const defaultOption = document.createElement('option');
-      defaultOption.value = '';
-      defaultOption.textContent = '-- Selecciona estudiante --';
-      selector.appendChild(defaultOption);
+function loadStudentSelector() {
+  const selector = document.getElementById('studentSelector');
+  selector.innerHTML = '';
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = '-- Selecciona estudiante --';
+  selector.appendChild(defaultOption);
 
-      // Convertir objeto a array para ordenar
-      const studentsArray = Object.entries(students);
+  // Crear array de [id, estudiante] para ordenar
+  const studentsArray = Object.entries(students);
 
-      // Ordenar por apellido paterno (primer palabra del nombre completo)
-      studentsArray.sort((a, b) => {
-        const apPatA = a[1].apPat ? a[1].apPat.toLowerCase() : a[1].name.split(' ')[0].toLowerCase();
-        const apPatB = b[1].apPat ? b[1].apPat.toLowerCase() : b[1].name.split(' ')[0].toLowerCase();
-        if (apPatA < apPatB) return -1;
-        if (apPatA > apPatB) return 1;
-        return 0;
-      });
+  // Ordenar por último apellido (asumiendo último término del nombre)
+  studentsArray.sort((a, b) => {
+    const apellidoA = a[1].name.trim().split(' ').slice(-1)[0].toLowerCase();
+    const apellidoB = b[1].name.trim().split(' ').slice(-1)[0].toLowerCase();
+    if (apellidoA < apellidoB) return -1;
+    if (apellidoA > apellidoB) return 1;
+    return 0;
+  });
 
-      for (const [id, student] of studentsArray) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = student.name + (student.rut ? ` (${student.rut})` : '');
-        selector.appendChild(option);
-      }
+  // Agregar opciones ordenadas
+  for (const [id, student] of studentsArray) {
+    const option = document.createElement('option');
+    option.value = id;
+    option.textContent = student.name + (student.rut ? ` (${student.rut})` : '');
+    selector.appendChild(option);
+  }
 
-      selector.value = currentStudentId || '';
-    }
+  selector.value = currentStudentId || '';
+}
 
     function addStudent() {
       const rut = prompt('Ingrese RUT del estudiante (sin puntos ni guión):') || '';
