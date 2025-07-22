@@ -498,17 +498,17 @@
     document.getElementById('editStudentBtn').addEventListener('click', editStudent);
     document.getElementById('deleteStudentBtn').addEventListener('click', deleteStudent);
 
-    if (Object.keys(students).length === 0) {
-      students['12345678-9'] = { name: 'Perez Casanova Juan', approved: [], reprobated: [] };
-      currentStudentId = '12345678-9';
-      saveStudents();
-    } else {
-      currentStudentId = Object.keys(students)[0];
-    }
+if (Object.keys(students).length === 0) {
+  students['12345678-9'] = { name: 'Perez Casanova Juan', approved: [], reprobated: [] };
+  currentStudentId = '12345678-9';
+  saveStudents();
+} else {
+  currentStudentId = Object.keys(students)[0];
+}
 
-    populateStudentSelector();
-    renderCurriculum();
-    updateProgress();
+populateStudentSelector();
+renderCurriculum();
+updateProgress();
   </script>
 </body>
 </html>
