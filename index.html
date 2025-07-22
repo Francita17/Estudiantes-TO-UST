@@ -19,30 +19,31 @@
       margin-bottom: 20px;
       font-size: 1.8em;
     }
-    .controls {
+    #studentControls {
+      width: 80%;
+      margin: 10px auto 30px;
       text-align: center;
-      margin-bottom: 15px;
     }
     select, button {
-      font-size: 1em;
-      margin: 0 5px 10px;
+      margin: 0 6px 6px;
       padding: 8px 12px;
-      border-radius: 6px;
-      border: 1.5px solid #4caf50;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #4caf50;
       cursor: pointer;
+      background-color: white;
+      color: #2e7d32;
       user-select: none;
     }
     select {
-      min-width: 220px;
+      min-width: 280px;
     }
     button:hover, select:hover {
-      background-color: #4caf50;
-      color: white;
-      border-color: #388e3c;
+      background-color: #c8e6c9;
     }
     .progress-container {
       width: 80%;
-      margin: 0 auto 20px;
+      margin: 0 auto 25px;
       text-align: center;
     }
     .progress-bar {
@@ -67,6 +68,8 @@
       flex-wrap: wrap;
       gap: 15px;
       justify-content: center;
+      width: 80%;
+      margin: 0 auto 50px;
     }
     .year {
       min-width: 230px;
@@ -122,9 +125,9 @@
       border-color: #388e3c;
     }
     .subject.reprobated {
-      background: #d9534f;
+      background: #d32f2f;
       color: white;
-      border-color: #a94442;
+      border-color: #b71c1c;
     }
     .subject.locked {
       background: #e0e0e0;
@@ -152,22 +155,28 @@
         min-width: 100%;
         max-width: 100%;
       }
+      #studentControls {
+        width: 95%;
+      }
+      .curriculum {
+        width: 95%;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Malla Curricular - (Sin estudiante seleccionado)</h1>
+  <h1>Malla Curricular - Terapia Ocupacional</h1>
 
-  <div class="controls">
-    <select id="studentSelector"></select>
-    <button id="addStudentBtn" title="Añadir estudiante">➕ Añadir</button>
-    <button id="editStudentBtn" title="Editar estudiante">✏️ Editar</button>
-    <button id="deleteStudentBtn" title="Eliminar estudiante">🗑️ Eliminar</button>
-    <button id="resetProgressBtn" title="Reiniciar progreso estudiante">🔄 Reiniciar progreso</button>
+  <div id="studentControls">
+    <select id="studentSelector" aria-label="Seleccionar estudiante"></select>
+    <button id="addStudentBtn" title="Agregar estudiante">Agregar</button>
+    <button id="editStudentBtn" title="Editar estudiante">Editar</button>
+    <button id="deleteStudentBtn" title="Eliminar estudiante">Eliminar</button>
+    <button id="resetProgressBtn" title="Reiniciar progreso estudiante">Reiniciar progreso</button>
   </div>
 
-  <div class="progress-container">
-    <div>Progreso académico: <span id="progress-text">0%</span></div>
+  <div class="progress-container" aria-live="polite" aria-atomic="true">
+    <div id="progress-text">Progreso académico: 0%</div>
     <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
       <div class="progress-fill" id="progress-fill">0%</div>
     </div>
@@ -175,340 +184,401 @@
 
   <div class="curriculum" id="curriculum"></div>
 
-<script>
-  // Datos base
-  const curriculum = {
-    'Año 1': ['I', 'II'],
-    'Año 2': ['III', 'IV'],
-    'Año 3': ['V', 'VI'],
-    'Año 4': ['VII', 'VIII'],
-    'Año 5': ['IX', 'X']
-  };
+  <script>
+    // Datos curriculares y materias
+    const curriculum = {
+      'Año 1': ['I', 'II'],
+      'Año 2': ['III', 'IV'],
+      'Año 3': ['V', 'VI'],
+      'Año 4': ['VII', 'VIII'],
+      'Año 5': ['IX', 'X']
+    };
 
-  const subjects = [
-    { code: 'MAT-016', name: 'Razonamiento Lógico Matemático', semester: 'I', prereq: [] },
-    { code: 'BIO-006', name: 'Principios de la Biología', semester: 'I', prereq: [] },
-    { code: 'COM-001', name: 'Taller de Competencias para el Aprendizaje', semester: 'I', prereq: [] },
-    { code: 'FGL-149', name: 'Taller de Competencias Comunicativas', semester: 'I', prereq: [] },
-    { code: 'TOC-078', name: 'Fundamentos de Terapia Ocupacional', semester: 'I', prereq: [] },
-    { code: 'FGL-151', name: 'Taller de Desarrollo Personal I', semester: 'I', prereq: [] },
-    { code: 'TOC-079', name: 'Anatomía Descriptiva', semester: 'II', prereq: [] },
-    { code: 'TOC-080', name: 'Psicología General y del Desarrollo', semester: 'II', prereq: [] },
-    { code: 'TOC-119', name: 'Ocupación Humana', semester: 'II', prereq: ['TOC-078'] },
-    { code: 'FGL-152', name: 'Taller de Desarrollo Personal II', semester: 'II', prereq: [] },
-    { code: 'FGL-001', name: 'Cultura y Valores', semester: 'II', prereq: [] },
-    { code: 'ENF-150', name: 'Salud y Sociedad', semester: 'II', prereq: [] },
-    { code: 'ENF-151', name: 'Atención Básica de Urgencia', semester: 'II', prereq: [] },
-    { code: 'TOC-083', name: 'Desempeño y Participación Ocupacional', semester: 'III', prereq: ['TOC-119'] },
-    { code: 'TOC-006', name: 'Psicología Social y del Trabajo', semester: 'III', prereq: [] },
-    { code: 'TOC-084', name: 'Fundamentos del Movimiento Humano', semester: 'III', prereq: ['MAT-016'] },
-    { code: 'TOC-085', name: 'Anatomía y Fisiología de Sistemas', semester: 'III', prereq: [] },
-    { code: 'TOC-086', name: 'Introducción a la Salud Mental', semester: 'III', prereq: ['TOC-080'] },
-    { code: 'FGL-008', name: 'Inglés Básico I', semester: 'III', prereq: [] },
-    { code: 'FGL-111', name: 'Persona y Sentido', semester: 'III', prereq: [] },
-    { code: 'TOC-087', name: 'Evaluación del Desarrollo de Competencias HITO 1', semester: 'IV', prereq: ['TOC-083'] },
-    { code: 'TOC-088', name: 'Análisis y Adaptación de la Actividad', semester: 'IV', prereq: ['TOC-083'] },
-    { code: 'ENF-152', name: 'Ética y Salud', semester: 'IV', prereq: [] },
-    { code: 'TOC-089', name: 'Psicomotricidad', semester: 'IV', prereq: [] },
-    { code: 'TOC-090', name: 'Patología General', semester: 'IV', prereq: [] },
-    { code: 'TOC-091', name: 'Biomecánica', semester: 'IV', prereq: ['TOC-084'] },
-    { code: 'FGL-010', name: 'Inglés Básico II', semester: 'IV', prereq: ['FGL-008'] },
-    { code: 'TOC-092', name: 'Razonamiento Profesional', semester: 'V', prereq: ['TOC-083'] },
-    { code: 'TOC-057', name: 'Psicomotricidad Aplicada', semester: 'V', prereq: ['TOC-089'] },
-    { code: 'TOC-093', name: 'Gestión y Terapia Ocupacional', semester: 'V', prereq: [] },
-    { code: 'TOC-094', name: 'Salud Mental en Niños y Adolescentes', semester: 'V', prereq: ['TOC-086'] },
-    { code: 'TOC-095', name: 'Neurología en Niños y Adolescentes', semester: 'V', prereq: ['TOC-089'] },
-    { code: 'TOC-096', name: 'Traumatología', semester: 'V', prereq: ['TOC-079'] },
-    { code: 'TOC-EL1', name: 'Electivo I', semester: 'V', prereq: [] },
-    { code: 'TOC-097', name: 'Procesos de Terapia Ocupacional', semester: 'VI', prereq: ['TOC-092'] },
-    { code: 'TOC-098', name: 'Ergonomía y Salud en el Trabajo', semester: 'VI', prereq: ['TOC-088'] },
-    { code: 'TOC-099', name: 'Diagnóstico e Intervención en la Comunidad', semester: 'VI', prereq: [] },
-    { code: 'TOC-100', name: 'Salud Mental del Adulto y Persona Mayor', semester: 'VI', prereq: ['TOC-086'] },
-    { code: 'TOC-101', name: 'Neurología del Adulto y Persona Mayor', semester: 'VI', prereq: ['TOC-085'] },
-    { code: 'TOC-EL2', name: 'Electivo II', semester: 'VI', prereq: ['TOC-EL1'] },
-    { code: 'TOC-102', name: 'Diagnóstico Ocupacional en Personas Mayores', semester: 'VII', prereq: ['TOC-101','TOC-100','TOC-097'] },
-    { code: 'TOC-103', name: 'Diagnóstico Ocupacional en Adultos', semester: 'VII', prereq: ['TOC-101','TOC-100','TOC-097'] },
-    { code: 'TOC-104', name: 'Diagnóstico Ocupacional en Niños, Niñas y Adolescentes', semester: 'VII', prereq: ['TOC-094','TOC-097','TOC-095'] },
-    { code: 'TOC-068', name: 'Inclusión Educacional y Laboral', semester: 'VII', prereq: ['TOC-094','TOC-095','TOC-098'] },
-    { code: 'TOC-105', name: 'Órtesis y Tecnologías para la Inclusión', semester: 'VII', prereq: ['TOC-091','TOC-101','TOC-096'] },
-    { code: 'TOC-106', name: 'Estadística y Epidemiología', semester: 'VII', prereq: ['MAT-016'] },
-    { code: 'TOC-107', name: 'Evaluación del Desarrollo de Competencias HITO 2', semester: 'VIII', prereq: ['TOC-102','TOC-103','TOC-104'] },
-    { code: 'TOC-108', name: 'Intervención Ocupacional en Personas Mayores', semester: 'VIII', prereq: ['TOC-102'] },
-    { code: 'TOC-109', name: 'Intervención Ocupacional en Adultos', semester: 'VIII', prereq: ['TOC-103'] },
-    { code: 'TOC-110', name: 'Intervención Ocupacional en Niños y Adolescentes', semester: 'VIII', prereq: ['TOC-104'] },
-    { code: 'TOC-111', name: 'Órtesis', semester: 'VIII', prereq: ['TOC-105'] },
-    { code: 'TOC-EL3', name: 'Electivo III', semester: 'VIII', prereq: ['TOC-EL2'] },
-    { code: 'TOC-113', name: 'Metodología y Diseño de Investigación', semester: 'VIII', prereq: ['TOC-106'] },
-    { code: 'TOC-114', name: 'Internado Profesional I', semester: 'IX', prereq: ['TOC-107'] },
-    { code: 'TOC-115', name: 'Internado Profesional II', semester: 'IX', prereq: ['TOC-107','TOC-114'] },
-    { code: 'TOC-116', name: 'Seminario de Investigación', semester: 'IX', prereq: ['TOC-113'] },
-    { code: 'TOC-117', name: 'Internado Profesional III', semester: 'X', prereq: ['TOC-107','TOC-115'] },
-    { code: 'TOC-118', name: 'Internado Profesional IV', semester: 'X', prereq: ['TOC-107','TOC-117'] }
-  ];
+    const subjects = [
+      { code: 'MAT-016', name: 'Razonamiento Lógico Matemático', semester: 'I', prereq: [] },
+      { code: 'BIO-006', name: 'Principios de la Biología', semester: 'I', prereq: [] },
+      { code: 'COM-001', name: 'Taller de Competencias para el Aprendizaje', semester: 'I', prereq: [] },
+      { code: 'FGL-149', name: 'Taller de Competencias Comunicativas', semester: 'I', prereq: [] },
+      { code: 'TOC-078', name: 'Fundamentos de Terapia Ocupacional', semester: 'I', prereq: [] },
+      { code: 'FGL-151', name: 'Taller de Desarrollo Personal I', semester: 'I', prereq: [] },
+      { code: 'TOC-079', name: 'Anatomía Descriptiva', semester: 'II', prereq: [] },
+      { code: 'TOC-080', name: 'Psicología General y del Desarrollo', semester: 'II', prereq: [] },
+      { code: 'TOC-119', name: 'Ocupación Humana', semester: 'II', prereq: ['TOC-078'] },
+      { code: 'FGL-152', name: 'Taller de Desarrollo Personal II', semester: 'II', prereq: [] },
+      { code: 'FGL-001', name: 'Cultura y Valores', semester: 'II', prereq: [] },
+      { code: 'ENF-150', name: 'Salud y Sociedad', semester: 'II', prereq: [] },
+      { code: 'ENF-151', name: 'Atención Básica de Urgencia', semester: 'II', prereq: [] },
+      { code: 'TOC-083', name: 'Desempeño y Participación Ocupacional', semester: 'III', prereq: ['TOC-119'] },
+      { code: 'TOC-006', name: 'Psicología Social y del Trabajo', semester: 'III', prereq: [] },
+      { code: 'TOC-084', name: 'Fundamentos del Movimiento Humano', semester: 'III', prereq: ['MAT-016'] },
+      { code: 'TOC-085', name: 'Anatomía y Fisiología de Sistemas', semester: 'III', prereq: [] },
+      { code: 'TOC-086', name: 'Introducción a la Salud Mental', semester: 'III', prereq: ['TOC-080'] },
+      { code: 'FGL-008', name: 'Inglés Básico I', semester: 'III', prereq: [] },
+      { code: 'FGL-111', name: 'Persona y Sentido', semester: 'III', prereq: [] },
+      { code: 'TOC-087', name: 'Evaluación del Desarrollo de Competencias HITO 1', semester: 'IV', prereq: ['TOC-083'] },
+      { code: 'TOC-088', name: 'Análisis y Adaptación de la Actividad', semester: 'IV', prereq: ['TOC-083'] },
+      { code: 'ENF-152', name: 'Ética y Salud', semester: 'IV', prereq: [] },
+      { code: 'TOC-089', name: 'Psicomotricidad', semester: 'IV', prereq: [] },
+      { code: 'TOC-090', name: 'Patología General', semester: 'IV', prereq: [] },
+      { code: 'TOC-091', name: 'Biomecánica', semester: 'IV', prereq: ['TOC-084'] },
+      { code: 'FGL-010', name: 'Inglés Básico II', semester: 'IV', prereq: ['FGL-008'] },
+      { code: 'TOC-092', name: 'Razonamiento Profesional', semester: 'V', prereq: ['TOC-083'] },
+      { code: 'TOC-057', name: 'Psicomotricidad Aplicada', semester: 'V', prereq: ['TOC-089'] },
+      { code: 'TOC-093', name: 'Gestión y Terapia Ocupacional', semester: 'V', prereq: [] },
+      { code: 'TOC-094', name: 'Salud Mental en Niños y Adolescentes', semester: 'V', prereq: ['TOC-086'] },
+      { code: 'TOC-095', name: 'Neurología en Niños y Adolescentes', semester: 'V', prereq: ['TOC-089'] },
+      { code: 'TOC-096', name: 'Traumatología', semester: 'V', prereq: ['TOC-079'] },
+      { code: 'TOC-EL1', name: 'Electivo I', semester: 'V', prereq: [] },
+      { code: 'TOC-097', name: 'Procesos de Terapia Ocupacional', semester: 'VI', prereq: ['TOC-092'] },
+      { code: 'TOC-098', name: 'Ergonomía y Salud en el Trabajo', semester: 'VI', prereq: ['TOC-088'] },
+      { code: 'TOC-099', name: 'Diagnóstico e Intervención en la Comunidad', semester: 'VI', prereq: [] },
+      { code: 'TOC-100', name: 'Salud Mental del Adulto y Persona Mayor', semester: 'VI', prereq: ['TOC-086'] },
+      { code: 'TOC-101', name: 'Neurología del Adulto y Persona Mayor', semester: 'VI', prereq: ['TOC-085'] },
+      { code: 'TOC-EL2', name: 'Electivo II', semester: 'VI', prereq: ['TOC-EL1'] },
+      { code: 'TOC-102', name: 'Diagnóstico Ocupacional en Personas Mayores', semester: 'VII', prereq: ['TOC-101','TOC-100','TOC-097'] },
+      { code: 'TOC-103', name: 'Diagnóstico Ocupacional en Adultos', semester: 'VII', prereq: ['TOC-101','TOC-100','TOC-097'] },
+      { code: 'TOC-104', name: 'Diagnóstico Ocupacional en Niños, Niñas y Adolescentes', semester: 'VII', prereq: ['TOC-094','TOC-097','TOC-095'] },
+      { code: 'TOC-068', name: 'Inclusión Educacional y Laboral', semester: 'VII', prereq: ['TOC-094','TOC-095','TOC-098'] },
+      { code: 'TOC-105', name: 'Órtesis y Tecnologías para la Inclusión', semester: 'VII', prereq: ['TOC-091','TOC-101','TOC-096'] },
+      { code: 'TOC-106', name: 'Estadística y Epidemiología', semester: 'VII', prereq: ['MAT-016'] },
+      { code: 'TOC-107', name: 'Evaluación del Desarrollo de Competencias HITO 2', semester: 'VIII', prereq: ['TOC-102','TOC-103','TOC-104'] },
+      { code: 'TOC-108', name: 'Intervención Ocupacional en Personas Mayores', semester: 'VIII', prereq: ['TOC-102'] },
+      { code: 'TOC-109', name: 'Intervención Ocupacional en Adultos', semester: 'VIII', prereq: ['TOC-103'] },
+      { code: 'TOC-110', name: 'Intervención Ocupacional en Niños y Adolescentes', semester: 'VIII', prereq: ['TOC-104'] },
+      { code: 'TOC-111', name: 'Órtesis', semester: 'VIII', prereq: ['TOC-105'] },
+      { code: 'TOC-EL3', name: 'Electivo III', semester: 'VIII', prereq: ['TOC-EL2'] },
+      { code: 'TOC-113', name: 'Metodología y Diseño de Investigación', semester: 'VIII', prereq: ['TOC-106'] },
+      { code: 'TOC-114', name: 'Internado Profesional I', semester: 'IX', prereq: ['TOC-107'] },
+      { code: 'TOC-115', name: 'Internado Profesional II', semester: 'IX', prereq: ['TOC-107','TOC-114'] },
+      { code: 'TOC-116', name: 'Seminario de Investigación', semester: 'IX', prereq: ['TOC-113'] },
+      { code: 'TOC-117', name: 'Internado Profesional III', semester: 'X', prereq: ['TOC-107','TOC-115'] },
+      { code: 'TOC-118', name: 'Internado Profesional IV', semester: 'X', prereq: ['TOC-107','TOC-117'] }
+    ];
 
-  // Datos estudiantes y progreso guardados en localStorage
-  // students = { rut: nombre, ... }
-  // studentsData = { rut: { approved: [...], reprobated: [...] }, ... }
+    // Variables para manejar estudiantes y estado actual
+    let students = JSON.parse(localStorage.getItem('students') || '{}');
+    let currentStudentId = null;
 
-  let students = JSON.parse(localStorage.getItem('students') || '{}');
-  let studentsData = JSON.parse(localStorage.getItem('studentsData') || '{}');
-  let currentStudentId = null;
-
-  // Funciones para guardar
-  function saveStudents() {
-    localStorage.setItem('students', JSON.stringify(students));
-  }
-
-  function saveStudentsData() {
-    localStorage.setItem('studentsData', JSON.stringify(studentsData));
-  }
-
-  // Ordena estudiantes por apellido
-  function sortStudentsByLastName(studentMap) {
-    return Object.entries(studentMap)
-      .sort((a, b) => {
-        const lastA = a[1].split(' ').slice(-1)[0].toLowerCase();
-        const lastB = b[1].split(' ').slice(-1)[0].toLowerCase();
-        return lastA.localeCompare(lastB);
-      });
-  }
-
-  // Actualiza título con el nombre del estudiante seleccionado
-  function updateTitle() {
-    const title = document.querySelector('h1');
-    if (currentStudentId && students[currentStudentId]) {
-      title.textContent = `Malla Curricular - ${students[currentStudentId]}`;
-    } else {
-      title.textContent = 'Malla Curricular - (Sin estudiante seleccionado)';
+    // Funciones auxiliares
+    function isApproved(studentData, code) {
+      return studentData.approved.includes(code);
     }
-  }
+    function isReprobated(studentData, code) {
+      return studentData.reprobated.includes(code);
+    }
+    function meetsPrerequisites(studentData, subject) {
+      return subject.prereq.every(code => studentData.approved.includes(code));
+    }
+    function allSemestersApproved(studentData, uptoSemester) {
+      const allowedSemesters = ['I','II','III','IV','V','VI','VII','VIII'];
+      const semestersToCheck = allowedSemesters.slice(0, allowedSemesters.indexOf(uptoSemester) + 1);
+      const subjectsToCheck = subjects.filter(s => semestersToCheck.includes(s.semester));
+      return subjectsToCheck.every(s => studentData.approved.includes(s.code));
+    }
 
-  // Llena selector de estudiantes
-  function populateStudentSelector() {
-    const selector = document.getElementById('studentSelector');
-    selector.innerHTML = '';
+    // Renderiza la malla curricular
+    function renderCurriculum() {
+      const container = document.getElementById('curriculum');
+      container.innerHTML = '';
 
-    const sorted = sortStudentsByLastName(students);
+      // Si no hay estudiante seleccionado o existe, usar datos o vacíos
+      const studentData = (currentStudentId && students[currentStudentId])
+        ? students[currentStudentId]
+        : { approved: [], reprobated: [] };
 
-    if (sorted.length === 0) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = '(No hay estudiantes)';
-      selector.appendChild(option);
-      currentStudentId = null;
-    } else {
-      sorted.forEach(([rut, name]) => {
+      for (const [yearLabel, semesters] of Object.entries(curriculum)) {
+        const yearDiv = document.createElement('div');
+        yearDiv.className = 'year';
+        yearDiv.innerHTML = `<h2>${yearLabel}</h2>`;
+
+        semesters.forEach(sem => {
+          const semDiv = document.createElement('div');
+          semDiv.className = 'semester';
+          semDiv.innerHTML = `<h3>Semestre ${sem}</h3>`;
+
+          subjects
+            .filter(s => s.semester === sem)
+            .forEach(subject => {
+              const unlocked = meetsPrerequisites(studentData, subject) && (
+                (subject.semester === 'IX' || subject.semester === 'X')
+                  ? allSemestersApproved(studentData, 'VIII')
+                  : true
+              );
+
+              const subjectDiv = document.createElement('div');
+              subjectDiv.className = 'subject';
+              subjectDiv.textContent = `${subject.name} (${subject.code})`;
+
+              if(subject.prereq.length > 0) {
+                const prereqNames = subject.prereq.map(code => {
+                  const subj = subjects.find(s => s.code === code);
+                  return subj ? `${subj.name} (${subj.code})` : code;
+                });
+                subjectDiv.title = `Prerrequisitos:\n${prereqNames.join('\n')}`;
+              }
+
+              if (!unlocked) {
+                subjectDiv.classList.add('locked');
+                subjectDiv.title = 'Asignatura bloqueada: Prerrequisitos no cumplidos';
+              } else if (isApproved(studentData, subject.code)) {
+                subjectDiv.classList.add('approved');
+                subjectDiv.title = 'Asignatura aprobada';
+              } else if (isReprobated(studentData, subject.code)) {
+                subjectDiv.classList.add('reprobated');
+                subjectDiv.title = 'Asignatura reprobada';
+              }
+
+              subjectDiv.addEventListener('click', () => {
+                if (!unlocked) return;
+                if (!currentStudentId) return;
+
+                if (isApproved(studentData, subject.code)) {
+                  // Cambiar a reprobado
+                  studentData.approved = studentData.approved.filter(c => c !== subject.code);
+                  if (!studentData.reprobated.includes(subject.code)) {
+                    studentData.reprobated.push(subject.code);
+                  }
+                } else if (isReprobated(studentData, subject.code)) {
+                  // Quitar reprobado
+                  studentData.reprobated = studentData.reprobated.filter(c => c !== subject.code);
+                } else {
+                  // Marcar aprobado
+                  studentData.approved.push(subject.code);
+                  studentData.reprobated = studentData.reprobated.filter(c => c !== subject.code);
+                }
+                saveStudents();
+                renderCurriculum();
+                updateProgress();
+              });
+
+              semDiv.appendChild(subjectDiv);
+            });
+
+          yearDiv.appendChild(semDiv);
+        });
+
+        container.appendChild(yearDiv);
+      }
+    }
+
+    // Actualiza barra y texto de progreso
+    function updateProgress() {
+      const progressText = document.getElementById('progress-text');
+      const progressFill = document.getElementById('progress-fill');
+
+      if (!currentStudentId || !students[currentStudentId]) {
+        progressText.textContent = 'Progreso académico: 0%';
+        progressFill.style.width = '0%';
+        progressFill.textContent = '0%';
+        progressFill.setAttribute('aria-valuenow', 0);
+        return;
+      }
+
+      const studentData = students[currentStudentId];
+      const totalSubjects = subjects.length;
+      const approvedCount = studentData.approved.length;
+      const percent = Math.round((approvedCount / totalSubjects) * 100);
+
+      progressText.textContent = `Progreso académico: ${percent}%`;
+      progressFill.style.width = `${percent}%`;
+      progressFill.textContent = `${percent}%`;
+      progressFill.setAttribute('aria-valuenow', percent);
+    }
+
+    // Guarda estudiantes en localStorage
+    function saveStudents() {
+      localStorage.setItem('students', JSON.stringify(students));
+    }
+
+    // Ordena estudiantes por apellido
+    function sortStudentsByLastName(studentMap) {
+      return Object.entries(studentMap).sort((a, b) => {
+        const nameA = a[1].split(' ').slice(-1)[0].toLowerCase();
+        const nameB = b[1].split(' ').slice(-1)[0].toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+    }
+
+    // Llena selector de estudiantes
+    function populateStudentSelector() {
+      const selector = document.getElementById('studentSelector');
+      selector.innerHTML = '';
+
+      // Ordenar estudiantes por apellido
+      const sorted = sortStudentsByLastName(students);
+
+      // Opciones
+      sorted.forEach(([id, name]) => {
         const option = document.createElement('option');
-        option.value = rut;
+        option.value = id;
         option.textContent = name;
         selector.appendChild(option);
       });
-      // Selecciona primero si no hay seleccionado o no existe
-      if (!currentStudentId || !students[currentStudentId]) {
-        currentStudentId = sorted[0][0];
-      }
-      selector.value = currentStudentId;
-    }
-    updateTitle();
-  }
 
-  // Verifica prerrequisitos aprobados
-  function canTakeSubject(subjectCode) {
-    if (!currentStudentId || !studentsData[currentStudentId]) return false;
-    const approved = studentsData[currentStudentId].approved || [];
-    const subject = subjects.find(s => s.code === subjectCode);
-    if (!subject) return false;
-    return subject.prereq.every(pre => approved.includes(pre));
-  }
-
-  // Renderiza malla curricular
-  function renderCurriculum() {
-    const container = document.getElementById('curriculum');
-    container.innerHTML = '';
-
-    for (const [year, semesters] of Object.entries(curriculum)) {
-      const yearDiv = document.createElement('div');
-      yearDiv.className = 'year';
-      const h2 = document.createElement('h2');
-      h2.textContent = year;
-      yearDiv.appendChild(h2);
-
-      semesters.forEach(sem => {
-        const semDiv = document.createElement('div');
-        semDiv.className = 'semester';
-        const h3 = document.createElement('h3');
-        h3.textContent = `Semestre ${sem}`;
-        semDiv.appendChild(h3);
-
-        const subs = subjects.filter(sub => sub.semester === sem);
-        subs.forEach(sub => {
-          const subDiv = document.createElement('div');
-          subDiv.className = 'subject';
-
-          // Estado según progreso
-          if (currentStudentId && studentsData[currentStudentId]) {
-            const data = studentsData[currentStudentId];
-            if (data.approved.includes(sub.code)) {
-              subDiv.classList.add('approved');
-            } else if (data.reprobated.includes(sub.code)) {
-              subDiv.classList.add('reprobated');
-            } else if (!canTakeSubject(sub.code)) {
-              subDiv.classList.add('locked');
-            }
-          } else {
-            // Sin estudiante seleccionado o sin datos, bloquear prerrequisitos
-            if (!canTakeSubject(sub.code)) {
-              subDiv.classList.add('locked');
-            }
-          }
-
-          subDiv.textContent = `${sub.code} - ${sub.name}`;
-          if (sub.prereq.length > 0) {
-            subDiv.title = 'Prerrequisitos: ' + sub.prereq.join(', ');
-          }
-
-          // Toggle progreso clickeando asignatura
-          subDiv.onclick = () => {
-            if (!currentStudentId) {
-              alert('Seleccione un estudiante primero');
-              return;
-            }
-            if (subDiv.classList.contains('locked')) return;
-
-            const data = studentsData[currentStudentId];
-            if (!data) return;
-
-            if (data.approved.includes(sub.code)) {
-              // Cambia a reprobado
-              data.approved = data.approved.filter(c => c !== sub.code);
-              if (!data.reprobated.includes(sub.code)) data.reprobated.push(sub.code);
-              subDiv.classList.remove('approved');
-              subDiv.classList.add('reprobated');
-            } else if (data.reprobated.includes(sub.code)) {
-              // Quitar reprobado
-              data.reprobated = data.reprobated.filter(c => c !== sub.code);
-              subDiv.classList.remove('reprobated');
-            } else {
-              // Marcar aprobado
-              data.approved.push(sub.code);
-              subDiv.classList.add('approved');
-            }
-            saveStudentsData();
-            updateProgress();
-            renderCurriculum();
-          };
-
-          semDiv.appendChild(subDiv);
-        });
-
-        yearDiv.appendChild(semDiv);
-      });
-
-      container.appendChild(yearDiv);
-    }
-  }
-
-  // Calcula y muestra progreso aprobado
-  function updateProgress() {
-    const progressText = document.getElementById('progress-text');
-    const progressFill = document.getElementById('progress-fill');
-    if (!currentStudentId || !studentsData[currentStudentId]) {
-      progressText.textContent = '0%';
-      progressFill.style.width = '0%';
-      progressFill.textContent = '0%';
-      return;
-    }
-    const data = studentsData[currentStudentId];
-    const totalSubjects = subjects.length;
-    const approvedCount = data.approved.length;
-    const percent = Math.round((approvedCount / totalSubjects) * 100);
-    progressText.textContent = `${percent}%`;
-    progressFill.style.width = `${percent}%`;
-    progressFill.textContent = `${percent}%`;
-  }
-
-  // Añade estudiante
-  function addStudent() {
-    let rut = prompt('Ingrese RUT del estudiante (sin puntos ni guion):');
-    if (!rut) return alert('RUT no puede estar vacío.');
-    rut = rut.trim();
-    if (students.hasOwnProperty(rut)) return alert('Estudiante ya existe.');
-
-    let name = prompt('Ingrese nombre completo del estudiante:');
-    if (!name) return alert('Nombre no puede estar vacío.');
-    name = name.trim();
-
-    students[rut] = name;
-    studentsData[rut] = { approved: [], reprobated: [] };
-    saveStudents();
-    saveStudentsData();
-    currentStudentId = rut;
-    populateStudentSelector();
-    renderCurriculum();
-    updateProgress();
-  }
-
-  // Editar estudiante seleccionado
-  function editStudent() {
-    if (!currentStudentId) return alert('No hay estudiante seleccionado.');
-    const currentName = students[currentStudentId];
-    let newName = prompt('Editar nombre completo:', currentName);
-    if (!newName) return alert('Nombre no puede estar vacío.');
-    newName = newName.trim();
-    students[currentStudentId] = newName;
-    saveStudents();
-    populateStudentSelector();
-    updateTitle();
-  }
-
-  // Eliminar estudiante seleccionado
-  function deleteStudent() {
-    if (!currentStudentId) return alert('No hay estudiante seleccionado.');
-    if (!confirm(`¿Está seguro de eliminar al estudiante ${students[currentStudentId]}? Esta acción no se puede deshacer.`)) return;
-
-    delete studentsData[currentStudentId];
-    delete students[currentStudentId];
-    saveStudents();
-    saveStudentsData();
-    currentStudentId = null;
-    populateStudentSelector();
-    renderCurriculum();
-    updateProgress();
-  }
-
-  // Reiniciar progreso estudiante seleccionado
-  function resetProgress() {
-    if (!currentStudentId) return alert('No hay estudiante seleccionado.');
-    if (!confirm('¿Confirma reiniciar el progreso del estudiante seleccionado?')) return;
-    studentsData[currentStudentId] = { approved: [], reprobated: [] };
-    saveStudentsData();
-    renderCurriculum();
-    updateProgress();
-  }
-
-  // Inicialización y eventos
-  window.onload = () => {
-    populateStudentSelector();
-    renderCurriculum();
-    updateProgress();
-
-    document.getElementById('studentSelector').addEventListener('change', (e) => {
-      const selectedId = e.target.value;
-      if (students.hasOwnProperty(selectedId)) {
-        currentStudentId = selectedId;
-      } else {
+      // Si no hay estudiantes
+      if (sorted.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '(No hay estudiantes)';
+        selector.appendChild(option);
         currentStudentId = null;
+      } else {
+        // Seleccionar primer estudiante si no hay seleccionado o si actual no existe
+        if (!currentStudentId || !students[currentStudentId]) {
+          currentStudentId = sorted[0][0];
+        }
+        selector.value = currentStudentId;
+      }
+      updateTitle();
+    }
+
+    // Actualiza título con nombre estudiante o mensaje
+    function updateTitle() {
+      const title = document.querySelector('h1');
+      if (currentStudentId && students[currentStudentId]) {
+        title.textContent = `Malla Curricular - ${students[currentStudentId]}`;
+      } else {
+        title.textContent = 'Malla Curricular - (Sin estudiante seleccionado)';
+      }
+    }
+
+    // Añadir estudiante
+    function addStudent() {
+      let rut = prompt('Ingrese RUT del estudiante (sin puntos ni guión)');
+      if (!rut) return alert('RUT no válido');
+      rut = rut.trim();
+
+      let name = prompt('Ingrese nombre completo del estudiante');
+      if (!name) return alert('Nombre no válido');
+      name = name.trim();
+
+      if (students[rut]) {
+        if (!confirm('Este RUT ya existe. ¿Desea sobrescribir el estudiante?')) return;
+      }
+
+      students[rut] = name;
+      // Inicializar progreso vacío
+      if (!students[rut + '_data']) {
+        students[rut + '_data'] = { approved: [], reprobated: [] };
+      }
+      currentStudentId = rut;
+      saveStudents();
+      saveStudentData();
+      populateStudentSelector();
+      renderCurriculum();
+      updateProgress();
+    }
+
+    // Editar estudiante (solo nombre)
+    function editStudent() {
+      if (!currentStudentId || !students[currentStudentId]) {
+        return alert('Seleccione un estudiante para editar');
+      }
+      let newName = prompt('Editar nombre completo del estudiante:', students[currentStudentId]);
+      if (!newName) return alert('Nombre no válido');
+      newName = newName.trim();
+      students[currentStudentId] = newName;
+      saveStudents();
+      populateStudentSelector();
+      updateTitle();
+    }
+
+    // Eliminar estudiante y su progreso
+    function deleteStudent() {
+      if (!currentStudentId || !students[currentStudentId]) {
+        return alert('Seleccione un estudiante para eliminar');
+      }
+      if (!confirm(`¿Confirma eliminar al estudiante "${students[currentStudentId]}"? Esta acción no se puede deshacer.`)) return;
+
+      // Eliminar datos y progreso
+      delete students[currentStudentId];
+      delete students[currentStudentId + '_data'];
+      currentStudentId = null;
+      saveStudents();
+      saveStudentData();
+      populateStudentSelector();
+      renderCurriculum();
+      updateProgress();
+      updateTitle();
+    }
+
+    // Reiniciar progreso de estudiante actual
+    function resetProgress() {
+      if (!currentStudentId || !students[currentStudentId]) {
+        return alert('Seleccione un estudiante para reiniciar progreso');
+      }
+      if (!confirm(`¿Confirma reiniciar el progreso académico de "${students[currentStudentId]}"?`)) return;
+
+      students[currentStudentId + '_data'] = { approved: [], reprobated: [] };
+      saveStudentData();
+      renderCurriculum();
+      updateProgress();
+    }
+
+    // Guardar datos de progreso (aprobado/reprobado)
+    function saveStudentData() {
+      // Guardar todo el progreso en localStorage en clave 'studentsData'
+      let data = JSON.parse(localStorage.getItem('studentsData') || '{}');
+      for (const id in students) {
+        if (!id.endsWith('_data')) continue;
+        data[id] = students[id];
+      }
+      localStorage.setItem('studentsData', JSON.stringify(data));
+    }
+
+    // Cargar datos de progreso desde localStorage
+    function loadStudentData() {
+      const data = JSON.parse(localStorage.getItem('studentsData') || '{}');
+      for (const id in data) {
+        students[id] = data[id];
+      }
+    }
+
+    // Obtener datos progreso de estudiante actual
+    function getStudentData() {
+      if (!currentStudentId) return { approved: [], reprobated: [] };
+      return students[currentStudentId + '_data'] || { approved: [], reprobated: [] };
+    }
+
+    // Cambiar currentStudentId y actualizar vista
+    function onStudentChange() {
+      const selector = document.getElementById('studentSelector');
+      const selectedId = selector.value;
+      if (!students[selectedId]) {
+        currentStudentId = null;
+      } else {
+        currentStudentId = selectedId;
       }
       updateTitle();
       renderCurriculum();
       updateProgress();
+    }
+
+    // --- Inicio script ---
+    // Cargar datos
+    loadStudentData();
+
+    // Sin estudiantes, agregar estructura vacía
+    Object.keys(students).forEach(key => {
+      if (!key.endsWith('_data')) {
+        if (!students[key + '_data']) {
+          students[key + '_data'] = { approved: [], reprobated: [] };
+        }
+      }
     });
 
+    populateStudentSelector();
+
+    // Eventos
+    document.getElementById('studentSelector').addEventListener('change', onStudentChange);
     document.getElementById('addStudentBtn').addEventListener('click', addStudent);
     document.getElementById('editStudentBtn').addEventListener('click', editStudent);
     document.getElementById('deleteStudentBtn').addEventListener('click', deleteStudent);
     document.getElementById('resetProgressBtn').addEventListener('click', resetProgress);
-  };
-</script>
+
+    // Renderizar
+    renderCurriculum();
+    updateProgress();
+  </script>
 </body>
 </html>
